@@ -17,6 +17,12 @@ pub struct Position {
     pub y: u32,
 }
 
+impl Position {
+    fn as_dim(&self) -> (usize, usize) {
+        (self.x as usize, self.y as usize)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum MoveDirection {
     Up,

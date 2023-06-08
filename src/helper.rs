@@ -1,25 +1,11 @@
 use crate::{MoveDirection, Position};
 
-pub fn move_by_direction(pos: &Position, dir: &MoveDirection) -> Position {
+pub fn move_by_direction(pos: &Position, dir: &MoveDirection, game_size: &Position) -> Position {
     match dir {
-        MoveDirection::Up => Position { x: pos.x, y: pos.y-1 },
-        MoveDirection::Right => Position { x: pos.x+1, y: pos.y },
-        MoveDirection::Down => Position { x: pos.x, y: pos.y+1 },
-        MoveDirection::Left => Position { x: pos.x-1, y: pos.y },
-    }
-}
-
-pub fn direction_from_move(pos1: &Position, pos2: &Position) -> MoveDirection {
-    if pos2.x > pos1.x {
-        MoveDirection::Right
-    } else if pos2.x < pos1.x {
-        MoveDirection::Left
-    } else if pos2.y < pos1.y {
-        MoveDirection::Up
-    } else if pos2.y > pos1.y {
-        MoveDirection::Down
-    } else {
-        panic!();
+        MoveDirection::Up => Position { x: pos.x, y: (game_size.y + pos.y-1) % game_size.y },
+        MoveDirection::Right => Position { x: (pos.x+1) % game_size.x, y: pos.y },
+        MoveDirection::Down => Position { x: pos.x, y: (pos.y+1) % game_size.y },
+        MoveDirection::Left => Position { x: (game_size.x + pos.x-1) % game_size.x, y: pos.y },
     }
 }
 

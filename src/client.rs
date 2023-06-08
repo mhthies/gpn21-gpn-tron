@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Write};
 use log::{debug, warn};
 use crate::{MoveDirection, Position};
 
+#[derive(Default, Clone, Eq, PartialEq)]
 pub struct PlayerId(u32);
 
 pub enum Command<'a> {
