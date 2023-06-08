@@ -1,0 +1,8 @@
+[server]
+address = "example.com:4000"
+
+[user]
+user = "user"
+password = "password"
+
+[algorithm]
