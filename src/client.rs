@@ -4,9 +4,10 @@ use std::io::{BufRead, BufReader, Write};
 use log::{debug, warn};
 use crate::{MoveDirection, Position};
 
-#[derive(Default, Clone, Eq, PartialEq)]
+#[derive(Default, Clone, Eq, PartialEq, Hash, Copy)]
 pub struct PlayerId(u32);
 
+#[derive(Debug)]
 pub enum Command<'a> {
     Join(&'a str, &'a str),
     Move(MoveDirection),

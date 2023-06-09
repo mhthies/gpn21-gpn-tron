@@ -11,7 +11,7 @@ mod client;
 mod algorithm;
 mod helper;
 
-#[derive(Default,Clone,Eq,PartialEq,Hash)]
+#[derive(Default,Clone,Eq,PartialEq,Hash,Debug)]
 pub struct Position {
     pub x: u32,
     pub y: u32,
@@ -89,6 +89,7 @@ pub fn game_loop(config: &Config, stream: &mut TcpStream, stream_reader: &mut Bu
                 Answer::Tick => {
                     info!("Tick.");
                     if let Some(command) = decide_action(&mut state, rng, &config.algorithm) {
+                        info!("Command: {:?}", command);
                         client::send_command(stream, &command)?;
                     }
                 }
