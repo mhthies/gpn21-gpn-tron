@@ -130,12 +130,13 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
 fn evaluate_direction(d: &MoveDirection, empty_space: &EmptySpaceState, state: &State) -> f32 {
     let next_position = move_by_direction(&state.my_position, d, &state.game_size);
 
-    let player_distances: f32 = state.player_heads.iter()
+    let min_player_distance: f32 = state.player_heads.iter()
         .filter(|(p, _pos)| **p != state.my_id)
-        .map(|(_p, pos)| state.game_size.x as f32 / point_to_point_distance(&next_position, &pos, &state.game_size))
-        .sum();
+        .map(|(_p, pos)| OrderedFloat(point_to_point_distance(&next_position, &pos, &state.game_size)))
+        .min()
+        .unwrap().0;
 
-    player_distances / state.player_heads.len() as f32 - if has_wall(&next_position, state) { state.game_size.x as f32 / 3.0 } else {0.0}
+    1.0 / min_player_distance - if has_wall(&next_position, state) { 0.03 } else {0.0}
 }
 
 fn point_to_float_point_distance(p: &Position, x2: f32, y2: f32, game_size: &Position) -> f32 {
