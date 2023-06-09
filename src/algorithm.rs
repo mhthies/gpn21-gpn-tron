@@ -43,6 +43,7 @@ impl State {
                         *field = None;
                     }
                 }
+                self.player_heads.remove(p);
             },
             _ => {},
         }
@@ -65,6 +66,7 @@ pub fn decide_action(state: &mut State, rng: &mut ThreadRng, config: &AlgorithmC
     }
     let mut directions = [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right]
         .iter()
+        .filter(|d| !state.is_occupied(move_by_direction(&state.my_position, &d, &state.game_size)))
         .map(|d| (explore_empty_space(&state, move_by_direction(&state.my_position, &d, &state.game_size)), d))
         .collect::<Vec<_>>();
     directions.sort_by_key(|(r, d)| (OrderedFloat(evaluate_empty_space(&r)), OrderedFloat(evaluate_direction(&d, &r, &state))));
@@ -128,14 +130,24 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
 fn evaluate_direction(d: &MoveDirection, empty_space: &EmptySpaceState, state: &State) -> f32 {
     let next_position = move_by_direction(&state.my_position, d, &state.game_size);
 
-    point_to_center_distance(next_position, empty_space.mass_center().0, empty_space.mass_center().1, &state.game_size)
+    let player_distances: f32 = state.player_heads.iter()
+        .filter(|(p, _pos)| **p != state.my_id)
+        .map(|(_p, pos)| point_to_point_distance(&state.my_position, &pos, &state.game_size))
+        .sum();
+
+    point_to_float_point_distance(&next_position, empty_space.mass_center().0, empty_space.mass_center().1, &state.game_size)
+    + player_distances / state.player_heads.len() as f32
 }
 
-fn point_to_center_distance(p: Position, x2: f32, y2: f32, game_size: &Position) -> f32 {
+fn point_to_float_point_distance(p: &Position, x2: f32, y2: f32, game_size: &Position) -> f32 {
     return [
         OrderedFloat(((p.x as f32 - x2).powi(2) + (p.y as f32 - y2).powi(2)).sqrt()),
         OrderedFloat(((p.x as f32 - x2).powi(2) + ((p.y + game_size.y) as f32 - y2).powi(2)).sqrt()),
         OrderedFloat((((p.x + game_size.x) as f32 - x2).powi(2) + (p.y as f32 - y2).powi(2)).sqrt()),
         OrderedFloat((((p.x + game_size.x) as f32 - x2).powi(2) + ((p.y + game_size.y) as f32 - y2).powi(2)).sqrt()),
     ].into_iter().min().unwrap().0
+}
+
+fn point_to_point_distance(p1: &Position, p2: &Position, game_size: &Position) -> f32 {
+    point_to_float_point_distance(p1, p2.x as f32, p2.y as f32, game_size)
 }
