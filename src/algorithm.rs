@@ -132,11 +132,10 @@ fn evaluate_direction(d: &MoveDirection, empty_space: &EmptySpaceState, state: &
 
     let player_distances: f32 = state.player_heads.iter()
         .filter(|(p, _pos)| **p != state.my_id)
-        .map(|(_p, pos)| point_to_point_distance(&state.my_position, &pos, &state.game_size))
+        .map(|(_p, pos)| point_to_point_distance(&next_position, &pos, &state.game_size))
         .sum();
 
-    point_to_float_point_distance(&next_position, empty_space.mass_center().0, empty_space.mass_center().1, &state.game_size)
-    + player_distances / state.player_heads.len() as f32
+    - player_distances / state.player_heads.len() as f32 - if has_wall(&next_position, state) { state.game_size.x as f32 / 5.0 } else {0.0}
 }
 
 fn point_to_float_point_distance(p: &Position, x2: f32, y2: f32, game_size: &Position) -> f32 {
@@ -150,4 +149,12 @@ fn point_to_float_point_distance(p: &Position, x2: f32, y2: f32, game_size: &Pos
 
 fn point_to_point_distance(p1: &Position, p2: &Position, game_size: &Position) -> f32 {
     point_to_float_point_distance(p1, p2.x as f32, p2.y as f32, game_size)
+}
+
+fn has_wall(p: &Position, game_state: &State) -> bool {
+    [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right].iter()
+        .map(|d|move_by_direction(p, d, &game_state.game_size))
+        .filter(|p| *p != game_state.my_position)
+        .map(|p| game_state.is_occupied(p))
+        .any(|b| b)
 }
