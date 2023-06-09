@@ -155,7 +155,7 @@ fn point_to_point_distance(p1: &Position, p2: &Position, game_size: &Position) -
 fn has_wall(p: &Position, game_state: &State) -> bool {
     [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right].iter()
         .map(|d|move_by_direction(p, d, &game_state.game_size))
-        .filter(|p| *p != game_state.my_position)
+        .filter(|p| !game_state.player_heads.values().any(|head| *p == *head))
         .map(|p| game_state.is_occupied(p))
         .any(|b| b)
 }
