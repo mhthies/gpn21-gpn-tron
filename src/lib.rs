@@ -44,6 +44,8 @@ struct UserConfig {
 
 #[derive(Deserialize)]
 pub struct AlgorithmConfig {
+    #[serde(default)]
+    use_weighted_space_exploration: bool
 }
 
 #[derive(Deserialize)]
