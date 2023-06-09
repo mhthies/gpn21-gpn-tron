@@ -81,7 +81,7 @@ pub fn decide_action(state: &mut State, rng: &mut ThreadRng, config: &AlgorithmC
             .filter(|d| !state.is_occupied(move_by_direction(&state.my_position, &d, &state.game_size)))
             .map(|d| (explore_empty_space(&state, move_by_direction(&state.my_position, &d, &state.game_size)), d))
             .collect::<Vec<_>>();
-        directions.sort_by_key(|(r, d)| (OrderedFloat(evaluate_empty_space(&r)), OrderedFloat(evaluate_direction(&d, &r, &state))));
+        directions.sort_by_key(|(r, d)| (OrderedFloat(evaluate_empty_space(&r)), OrderedFloat(evaluate_direction(&d, state))));
         debug!("Directions: {:?}", directions);
         if directions.is_empty() {
             None
@@ -140,7 +140,7 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     if state.num_snake_heads == 0 {0f32} else {- (state.size as f32) / (state.num_snake_heads as f32).sqrt() }
 }
 
-fn evaluate_direction(d: &MoveDirection, empty_space: &EmptySpaceState, state: &State) -> f32 {
+fn evaluate_direction(d: &MoveDirection, state: &State) -> f32 {
     let next_position = move_by_direction(&state.my_position, d, &state.game_size);
 
     let min_player_distance: f32 = state.player_heads.iter()
@@ -165,11 +165,21 @@ fn point_to_point_distance(p1: &Position, p2: &Position, game_size: &Position) -
     point_to_float_point_distance(p1, p2.x as f32, p2.y as f32, game_size)
 }
 
-fn has_wall(p: &Position, game_state: &State) -> bool {
+fn has_wall(pos: &Position, game_state: &State) -> bool {
     [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right].iter()
-        .map(|d|move_by_direction(p, d, &game_state.game_size))
+        .map(|d|move_by_direction(pos, d, &game_state.game_size))
         .filter(|p| !game_state.player_heads.values().any(|head| *p == *head))
         .map(|p| game_state.is_occupied(p))
+        .any(|b| b)
+}
+
+fn has_head(pos: &Position, game_state: &State) -> bool {
+    [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right].iter()
+        .map(|d|move_by_direction(pos, d, &game_state.game_size))
+        .map(|p| {
+            game_state.player_heads.iter()
+                .filter(|(player, _head)| **player != game_state.my_id)
+                .any(|(_player, head)| p == *head)})
         .any(|b| b)
 }
 
@@ -177,8 +187,10 @@ fn has_wall(p: &Position, game_state: &State) -> bool {
 // New algorithm
 
 const MAX_FIELD_DISTANCE_SCALING: f32 = 1.0;
-const MIN_FIELD_DISTANCE_SCALING: f32 = 0.5;
-const FIELD_FACTOR_WALL: f32 = 1.1;
+const MIN_FIELD_DISTANCE_SCALING: f32 = 0.9;
+const FACTOR_WALL: f32 = 1.05;
+const FACTOR_HEAD: f32 = 0.85;
+const DISTANCE_EXPONENT: f32 = 0.6;
 
 fn evaluate_direction_weighted(state: &State, position: &Position, tainted_fields: &ndarray::Array2<f32>) -> f32 {
 
@@ -191,7 +203,7 @@ fn evaluate_direction_weighted(state: &State, position: &Position, tainted_field
 
     while let Some((dist, p)) = queue.pop_front() {
         if !state.is_occupied(p.clone()) {
-            let scaling = (state.game_size.x as f32 * 1.5 / (dist+1) as f32) * (MAX_FIELD_DISTANCE_SCALING - MIN_FIELD_DISTANCE_SCALING) + MIN_FIELD_DISTANCE_SCALING;
+            let scaling = (1.0 / ((dist+1) as f32).powf(DISTANCE_EXPONENT)) * (MAX_FIELD_DISTANCE_SCALING - MIN_FIELD_DISTANCE_SCALING) + MIN_FIELD_DISTANCE_SCALING;
             result += tainted_fields[p.as_dim()] * scaling;
             for direction in [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right] {
                 let next_pos = move_by_direction(&p, &direction, &state.game_size);
@@ -202,12 +214,12 @@ fn evaluate_direction_weighted(state: &State, position: &Position, tainted_field
             }
         }
     }
-    return - result * if has_wall(position, state) { FIELD_FACTOR_WALL } else { 1.0 };
+    return - result * if has_wall(position, state) { FACTOR_WALL } else if has_head(position, state) { FACTOR_HEAD } else  { 1.0 };
 }
 
 const MAX_FIELD_SCORE: f32 = 1.0;
-const MIN_FIELD_SCORE: f32 = 0.6;
-const FIELD_SCORE_ALPHA: f32 = 0.7;
+const MIN_FIELD_SCORE: f32 = 0.4;
+const FIELD_SCORE_ALPHA: f32 = 0.6;
 
 // IDEA: field score = 1.0 * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_1))) * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_2))) ...
 fn taint_fields_near_heads(state: &State) -> ndarray::Array2<f32> {
@@ -216,23 +228,21 @@ fn taint_fields_near_heads(state: &State) -> ndarray::Array2<f32> {
     for (player, head) in state.player_heads.iter() {
         if *player == state.my_id {
             continue;
-        } 
+        }
 
         let mut visited = std::collections::HashSet::new();
         let mut queue = std::collections::VecDeque::new();
 
         visited.insert(head.clone());
-        queue.push_back((0usize, head.clone()));
+        queue.push_back((-1i32, head.clone()));
 
         while let Some((dist, p)) = queue.pop_front() {
-            if !state.is_occupied(p.clone()) {
-                result[p.as_dim()] *= 1.0 - MIN_FIELD_SCORE.powf(dist as f32 * FIELD_SCORE_ALPHA);
-                for direction in [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right] {
-                    let next_pos = move_by_direction(&p, &direction, &state.game_size);
-                    if !visited.contains(&next_pos) {
-                        visited.insert(next_pos.clone());
-                        queue.push_back((dist+1, next_pos));
-                    }
+            result[p.as_dim()] *= 1.0 - MIN_FIELD_SCORE.powf(dist as f32 * FIELD_SCORE_ALPHA);
+            for direction in [MoveDirection::Up, MoveDirection::Down, MoveDirection::Left, MoveDirection::Right] {
+                let next_pos = move_by_direction(&p, &direction, &state.game_size);
+                if !visited.contains(&next_pos) && !state.is_occupied(next_pos.clone()){
+                    visited.insert(next_pos.clone());
+                    queue.push_back((dist+1, next_pos));
                 }
             }
         }
