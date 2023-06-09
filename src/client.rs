@@ -71,7 +71,9 @@ pub fn get_answer(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Answer
                 parts.next().unwrap_or("").to_string()
             ))
         },
-        "" => { None },
+        "" => {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Empty answer from server."));
+        },
         x => {
             warn!("Unkown message from server: {}", x);
             None
