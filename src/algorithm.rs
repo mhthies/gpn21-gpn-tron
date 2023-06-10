@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 mod algorithm1;
 mod algorithm2;
+mod algorithm3;
 mod helper;
 
 #[derive(Default)]
@@ -64,6 +65,7 @@ pub fn decide_action(
     match config.algorithm {
         0 => algorithm1::decide_action(state, rng, config),
         1 => algorithm2::decide_action(state, rng, config),
+        2 => algorithm3::decide_action(state, rng, config),
         _ => panic!("Unknown algorithm variant {}", config.algorithm),
     }
 }

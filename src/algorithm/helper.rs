@@ -79,3 +79,34 @@ pub fn has_neighbour_head(pos: &Position, game_state: &State) -> bool {
     })
     .any(|b| b)
 }
+
+pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Option<u32> {
+    let mut visited = std::collections::HashSet::new();
+    let mut queue = std::collections::VecDeque::new();
+
+    visited.insert(pos.clone());
+    queue.push_back((0usize, pos.clone()));
+
+    while let Some((dist, p)) = queue.pop_front() {
+        if game_state.player_heads.iter()
+                .filter(|(player, head)| **player != game_state.my_id)
+                .any(|(player, head)| *head == p) {
+            return Some(dist as u32);
+        }
+        if !game_state.is_occupied(p.clone()) {
+            for direction in [
+                MoveDirection::Up,
+                MoveDirection::Down,
+                MoveDirection::Left,
+                MoveDirection::Right,
+            ] {
+                let next_pos = move_by_direction(&p, &direction, &game_state.game_size);
+                if !visited.contains(&next_pos) {
+                    visited.insert(next_pos.clone());
+                    queue.push_back((dist+1, next_pos));
+                }
+            }
+        }
+    }
+    return None;
+}
