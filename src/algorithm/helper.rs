@@ -88,9 +88,12 @@ pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Opt
     queue.push_back((0usize, pos.clone()));
 
     while let Some((dist, p)) = queue.pop_front() {
-        if game_state.player_heads.iter()
-                .filter(|(player, head)| **player != game_state.my_id)
-                .any(|(player, head)| *head == p) {
+        if game_state
+            .player_heads
+            .iter()
+            .filter(|(player, head)| **player != game_state.my_id)
+            .any(|(player, head)| *head == p)
+        {
             return Some(dist as u32);
         }
         if !game_state.is_occupied(p.clone()) {
@@ -103,7 +106,7 @@ pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Opt
                 let next_pos = move_by_direction(&p, &direction, &game_state.game_size);
                 if !visited.contains(&next_pos) {
                     visited.insert(next_pos.clone());
-                    queue.push_back((dist+1, next_pos));
+                    queue.push_back((dist + 1, next_pos));
                 }
             }
         }
