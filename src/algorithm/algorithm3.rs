@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use super::helper::{
-    distance_to_next_opponent_head, has_wall, move_by_direction, point_to_point_distance,
+    distance_to_next_opponent_head, has_wall, move_by_direction,
 };
 use super::State;
 use crate::client::PlayerId;
@@ -116,7 +116,7 @@ fn evaluate_direction(
     d: &MoveDirection,
     empty_space: &EmptySpaceState,
     state: &State,
-    rng: &mut ThreadRng,
+    _rng: &mut ThreadRng,
     opponent_rooms: &Vec<f32>,
     tainted_fields: &FieldTaint,
 ) -> f32 {

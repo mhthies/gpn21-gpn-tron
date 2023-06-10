@@ -91,8 +91,8 @@ pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Opt
         if game_state
             .player_heads
             .iter()
-            .filter(|(player, head)| **player != game_state.my_id)
-            .any(|(player, head)| *head == p)
+            .filter(|(player, _head)| **player != game_state.my_id)
+            .any(|(_player, head)| *head == p)
         {
             return Some(dist as u32);
         }
