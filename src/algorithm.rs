@@ -10,7 +10,7 @@ mod algorithm2;
 mod algorithm3;
 mod helper;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct State {
     my_id: PlayerId,
     my_position: Position,

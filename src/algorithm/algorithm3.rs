@@ -4,6 +4,7 @@ use super::helper::{
     distance_to_next_opponent_head, has_wall, move_by_direction,
 };
 use super::State;
+use crate::algorithm::helper::has_neighbour_head;
 use crate::client::PlayerId;
 use crate::{AlgorithmConfig, Command, MoveDirection, Position};
 use log::{debug, info};
@@ -98,7 +99,7 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     if state.num_snake_heads == 0 {
         0f32
     } else {
-        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.5) * (state.wall_players.len() as f32).powf(0.1)
+        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.4) * (state.wall_players.len() as f32).powf(0.2)
     }
 }
 
@@ -133,15 +134,26 @@ fn evaluate_direction(
                     .0;
     info!("{}using compact mode.", if use_compact_mode {""} else {"not "});
 
+    let (updated_space_score, updated_opponent_rooms) = calculate_space_scores_after_step(state, &next_position);
+    let my_space_score_change = updated_space_score/evaluate_empty_space(empty_space);
+    let opponent_space_score_change = updated_opponent_rooms.iter().map(|f| OrderedFloat(*f)).min().unwrap_or(OrderedFloat(0.0)).0 / opponent_rooms.iter().map(|f| OrderedFloat(*f)).min().unwrap_or(OrderedFloat(1.0)).0;
+    debug!("My space score change: {:?} Opponent room change: {:?}", my_space_score_change, opponent_space_score_change);
+
     if use_compact_mode {
         let mut result =
             1.0 / distance_to_next_opponent_head(&next_position, state).unwrap_or(u32::MAX) as f32;
+            if my_space_score_change < 0.7 {
+                result += 0.02;
+            }
         if has_wall(&next_position, &state) {
             result -= 0.03;
         }
         result
     } else {
         - evaluate_direction_weighted(state, &next_position, tainted_fields)
+            * my_space_score_change.powf(0.1)
+            / opponent_space_score_change.powf(0.05)
+            * if has_neighbour_head(&next_position, state) { 0.85 } else { 1.0 }
     }
 }
 
@@ -218,3 +230,33 @@ fn taint_fields_near_heads(state: &State) -> FieldTaint {
     return result;
 }
 
+fn calculate_space_scores_after_step(game_state: &State, step_to: &Position) -> (f32, Vec<f32>) {
+    let mut new_state = game_state.clone();
+    new_state.field_occupation[step_to.as_dim()].replace(game_state.my_id);
+    new_state.player_heads.insert(new_state.my_id, step_to.clone());
+    new_state.my_position = step_to.clone();
+
+    let my_min_space = [
+        MoveDirection::Up,
+        MoveDirection::Down,
+        MoveDirection::Left,
+        MoveDirection::Right,
+    ]
+        .iter()
+        .filter(|d| !new_state.is_occupied(move_by_direction(&new_state.my_position, &d, &new_state.game_size)))
+        .map(|d| {
+            OrderedFloat(evaluate_empty_space(
+                &explore_empty_space(
+                    &new_state,
+                    move_by_direction(&new_state.my_position, &d, &new_state.game_size),
+                )
+            ))
+        })
+        .min()
+        .unwrap_or(OrderedFloat(0.0))
+        .0;
+
+    let opponent_rooms = evaluate_opponents_rooms(&new_state);
+    
+    (my_min_space, opponent_rooms)
+}
