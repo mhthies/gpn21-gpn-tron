@@ -39,7 +39,7 @@ pub fn decide_action(
         )
     })
     .collect::<Vec<_>>();
-    directions.sort_by_key(|(r, d)| {
+    directions.sort_by_cached_key(|(r, d)| {
         (
             OrderedFloat(evaluate_empty_space(&r)),
             OrderedFloat(evaluate_direction(&d, &r, state, rng, &opponent_rooms, &tainted_fields)),
