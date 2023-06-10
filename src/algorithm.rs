@@ -61,9 +61,9 @@ pub fn decide_action(
         return None;
     }
 
-    if config.use_weighted_space_exploration {
-        algorithm2::decide_action(state, rng, config)
-    } else {
-        algorithm1::decide_action(state, rng, config)
+    match config.algorithm {
+        0 => algorithm1::decide_action(state, rng, config),
+        1 => algorithm2::decide_action(state, rng, config),
+        _ => panic!("Unknown algorithm variant {}", config.algorithm),
     }
 }

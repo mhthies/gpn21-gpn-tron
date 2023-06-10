@@ -6,4 +6,4 @@ user = "user"
 password = "password"
 
 [algorithm]
-use_weighted_space_exploration = false
+algorithm = 0
