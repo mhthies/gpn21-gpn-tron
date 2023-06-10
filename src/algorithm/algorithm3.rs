@@ -98,7 +98,7 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     if state.num_snake_heads == 0 {
         0f32
     } else {
-        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.4) * (state.wall_players.len() as f32).powf(0.2)
+        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.5) * (state.wall_players.len() as f32).powf(0.1)
     }
 }
 
@@ -125,7 +125,7 @@ fn evaluate_direction(
     let next_position = move_by_direction(&state.my_position, d, &state.game_size);
     let use_compact_mode = empty_space.num_snake_heads <= 2
         || evaluate_empty_space(empty_space)
-            > 0.98 * opponent_rooms
+            > 0.8 * opponent_rooms
                     .iter()
                     .map(|f| OrderedFloat(*f))
                     .min()
@@ -179,9 +179,9 @@ fn evaluate_direction_weighted(
     return result;
 }
 
-const MAX_FIELD_SCORE: f32 = 0.9;
+const MAX_FIELD_SCORE: f32 = 0.95;
 const MIN_FIELD_SCORE: f32 = 0.4;
-const FIELD_SCORE_ALPHA: f32 = 0.6;
+const FIELD_SCORE_ALPHA: f32 = 0.8;
 
 // IDEA: field score = 1.0 * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_1))) * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_2))) ...
 fn taint_fields_near_heads(state: &State) -> FieldTaint {
