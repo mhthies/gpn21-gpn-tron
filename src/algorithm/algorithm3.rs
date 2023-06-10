@@ -71,8 +71,10 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
         if state.player_heads.values().any(|head| *head == p) {
             result.num_snake_heads += 1;
         }
-        if !state.is_occupied(p.clone()) || p == position {
+        if !state.is_occupied(p.clone()) {
             result.size += 1;
+        }
+        if !state.is_occupied(p.clone()) || p == position {
             for direction in [
                 MoveDirection::Up,
                 MoveDirection::Down,
@@ -123,7 +125,7 @@ fn evaluate_direction(
     let next_position = move_by_direction(&state.my_position, d, &state.game_size);
     let use_compact_mode = empty_space.num_snake_heads <= 2
         || evaluate_empty_space(empty_space)
-            > opponent_rooms
+            > 0.98 * opponent_rooms
                     .iter()
                     .map(|f| OrderedFloat(*f))
                     .min()
@@ -215,3 +217,4 @@ fn taint_fields_near_heads(state: &State) -> FieldTaint {
 
     return result;
 }
+
