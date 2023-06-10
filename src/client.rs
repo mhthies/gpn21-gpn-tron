@@ -4,7 +4,7 @@ use std::io;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
-#[derive(Default, Clone, Eq, PartialEq, Hash, Copy)]
+#[derive(Default, Clone, Eq, PartialEq, Hash, Copy, Debug)]
 pub struct PlayerId(u32);
 
 #[derive(Debug)]
