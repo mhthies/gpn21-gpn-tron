@@ -99,7 +99,7 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     if state.num_snake_heads == 0 {
         0f32
     } else {
-        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.4) * (state.wall_players.len() as f32).powf(0.3)
+        -(state.size as f32) / (state.num_snake_heads as f32).powf(0.3) * (state.wall_players.len() as f32).powf(0.3)
     }
 }
 
@@ -187,9 +187,9 @@ fn evaluate_direction_weighted(
     return result;
 }
 
-const MAX_FIELD_SCORE: f32 = 0.95;
+const MAX_FIELD_SCORE: f32 = 0.85;
 const MIN_FIELD_SCORE: f32 = 0.8;
-const FIELD_SCORE_ALPHA: f32 = 0.8;
+const FIELD_SCORE_ALPHA: f32 = 0.9;
 
 // IDEA: field score = 1.0 * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_1))) * (1 - (MIN_FIELD_SCORE ^ (alpha * distance_2))) ...
 fn taint_fields_near_heads(state: &State) -> FieldTaint {
