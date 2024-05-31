@@ -33,14 +33,13 @@ pub fn decide_action(
 fn rank_direction(d: &MoveDirection, state: &State) -> impl Ord {
     let next_position = move_by_direction(&state.my_position, &d, &state.game_size);
     let current_space = explore_empty_space(state, next_position.clone());
-    let use_compact_mode = current_space.next_snake_head_distance > 5;
     (
         has_neighbour_head(&next_position, state),
         OrderedFloat(calculate_best_empty_space_after_step(
             state,
             &move_by_direction(&state.my_position, &d, &state.game_size),
         )),
-        !(has_wall(&next_position, state) || !use_compact_mode),
+        !(has_wall(&next_position, state) && current_space.next_snake_head_distance > 4),
         OrderedFloat(evaluate_direction(&d, state)),
     )
 }
@@ -101,7 +100,9 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
     while let Some((dist, p)) = queue.pop_front() {
         if state.player_heads.values().any(|head| *head == p) {
             result.num_snake_heads += 1;
-            if dist < result.next_snake_head_distance {
+            if state.field_occupation.get(p.as_dim()) != Some(&Some(state.my_id))
+                && dist < result.next_snake_head_distance
+            {
                 result.next_snake_head_distance = dist;
             }
         }
@@ -118,7 +119,7 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
                 let next_pos = move_by_direction(&p, &direction, &state.game_size);
                 if !visited.contains(&next_pos) {
                     visited.insert(next_pos.clone());
-                    queue.push_back((dist+1, next_pos));
+                    queue.push_back((dist + 1, next_pos));
                 }
             }
         }
