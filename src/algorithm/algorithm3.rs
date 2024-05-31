@@ -10,7 +10,6 @@ use crate::{AlgorithmConfig, Command, MoveDirection, Position};
 use log::{debug, info};
 use ordered_float::OrderedFloat;
 use rand::rngs::ThreadRng;
-use rand::Rng;
 
 pub fn decide_action(
     state: &mut State,

@@ -70,14 +70,13 @@ pub fn has_neighbour_head(pos: &Position, game_state: &State) -> bool {
     ]
     .iter()
     .map(|d| move_by_direction(pos, d, &game_state.game_size))
-    .map(|p| {
+    .any(|p| {
         game_state
             .player_heads
             .iter()
             .filter(|(player, _head)| **player != game_state.my_id)
             .any(|(_player, head)| p == *head)
     })
-    .any(|b| b)
 }
 
 pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Option<u32> {
