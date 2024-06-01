@@ -52,6 +52,16 @@ impl State {
     fn is_occupied(&self, p: Position) -> bool {
         self.field_occupation[p.as_dim()].is_some()
     }
+
+    fn simulate_step(&self, step_to: &Position) -> State {
+        let mut new_state = self.clone();
+        new_state.field_occupation[step_to.as_dim()].replace(self.my_id);
+        new_state
+            .player_heads
+            .insert(new_state.my_id, step_to.clone());
+        new_state.my_position = step_to.clone();
+        new_state
+    }
 }
 
 pub fn decide_action(

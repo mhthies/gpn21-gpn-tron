@@ -2,6 +2,16 @@ use crate::algorithm::State;
 use crate::{MoveDirection, Position};
 use ordered_float::OrderedFloat;
 
+pub fn iter_directions() -> impl Iterator<Item = &'static MoveDirection> {
+    [
+        MoveDirection::Up,
+        MoveDirection::Down,
+        MoveDirection::Left,
+        MoveDirection::Right,
+    ]
+    .iter()
+}
+
 pub fn move_by_direction(pos: &Position, dir: &MoveDirection, game_size: &Position) -> Position {
     match dir {
         MoveDirection::Up => Position {
@@ -48,35 +58,23 @@ pub fn point_to_point_distance(p1: &Position, p2: &Position, game_size: &Positio
 }
 
 pub fn has_wall(pos: &Position, game_state: &State) -> bool {
-    [
-        MoveDirection::Up,
-        MoveDirection::Down,
-        MoveDirection::Left,
-        MoveDirection::Right,
-    ]
-    .iter()
-    .map(|d| move_by_direction(pos, d, &game_state.game_size))
-    .filter(|p| !game_state.player_heads.values().any(|head| *p == *head))
-    .map(|p| game_state.is_occupied(p))
-    .any(|b| b)
+    iter_directions()
+        .map(|d| move_by_direction(pos, d, &game_state.game_size))
+        .filter(|p| !game_state.player_heads.values().any(|head| *p == *head))
+        .map(|p| game_state.is_occupied(p))
+        .any(|b| b)
 }
 
 pub fn has_neighbour_head(pos: &Position, game_state: &State) -> bool {
-    [
-        MoveDirection::Up,
-        MoveDirection::Down,
-        MoveDirection::Left,
-        MoveDirection::Right,
-    ]
-    .iter()
-    .map(|d| move_by_direction(pos, d, &game_state.game_size))
-    .any(|p| {
-        game_state
-            .player_heads
-            .iter()
-            .filter(|(player, _head)| **player != game_state.my_id)
-            .any(|(_player, head)| p == *head)
-    })
+    iter_directions()
+        .map(|d| move_by_direction(pos, d, &game_state.game_size))
+        .any(|p| {
+            game_state
+                .player_heads
+                .iter()
+                .filter(|(player, _head)| **player != game_state.my_id)
+                .any(|(_player, head)| p == *head)
+        })
 }
 
 pub fn distance_to_next_opponent_head(pos: &Position, game_state: &State) -> Option<u32> {

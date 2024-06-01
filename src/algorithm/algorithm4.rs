@@ -1,5 +1,6 @@
 use super::helper::{
-    distance_to_next_opponent_head, has_neighbour_head, has_wall, move_by_direction,
+    distance_to_next_opponent_head, has_neighbour_head, has_wall, iter_directions,
+    move_by_direction,
 };
 use super::State;
 use crate::{AlgorithmConfig, Command, MoveDirection, Position};
@@ -45,36 +46,15 @@ fn rank_direction(d: &MoveDirection, state: &State) -> impl Ord {
 }
 
 fn calculate_best_empty_space_after_step(game_state: &State, step_to: &Position) -> f32 {
-    let mut new_state = game_state.clone();
-    new_state.field_occupation[step_to.as_dim()].replace(game_state.my_id);
-    new_state
-        .player_heads
-        .insert(new_state.my_id, step_to.clone());
-    new_state.my_position = step_to.clone();
+    let new_state = game_state.simulate_step(step_to);
 
-    let my_min_space = [
-        MoveDirection::Up,
-        MoveDirection::Down,
-        MoveDirection::Left,
-        MoveDirection::Right,
-    ]
-    .iter()
-    .filter(|d| {
-        !new_state.is_occupied(move_by_direction(
-            &new_state.my_position,
-            &d,
-            &new_state.game_size,
-        ))
-    })
-    .map(|d| {
-        OrderedFloat(evaluate_empty_space(&explore_empty_space(
-            &new_state,
-            move_by_direction(&new_state.my_position, &d, &new_state.game_size),
-        )))
-    })
-    .min()
-    .unwrap_or(OrderedFloat(0.0))
-    .0;
+    let my_min_space = iter_directions()
+        .map(|d| move_by_direction(&new_state.my_position, d, &new_state.game_size))
+        .filter(|p| !new_state.is_occupied(p.clone()))
+        .map(|p| OrderedFloat(evaluate_empty_space(&explore_empty_space(&new_state, p))))
+        .min()
+        .unwrap_or(OrderedFloat(0.0))
+        .0;
 
     my_min_space
 }
@@ -110,12 +90,7 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
             result.size += 1;
             result.sum_x += p.x;
             result.sum_y += p.y;
-            for direction in [
-                MoveDirection::Up,
-                MoveDirection::Down,
-                MoveDirection::Left,
-                MoveDirection::Right,
-            ] {
+            for direction in iter_directions() {
                 let next_pos = move_by_direction(&p, &direction, &state.game_size);
                 if !visited.contains(&next_pos) {
                     visited.insert(next_pos.clone());
