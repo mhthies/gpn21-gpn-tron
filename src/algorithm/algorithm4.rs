@@ -4,7 +4,7 @@ use super::helper::{
 };
 use super::State;
 use crate::{AlgorithmConfig, Command, MoveDirection, Position};
-use log::{debug, info, warn};
+use log::{info, warn};
 use ordered_float::OrderedFloat;
 use rand::rngs::ThreadRng;
 
@@ -62,7 +62,7 @@ fn rank_direction(d: &MoveDirection, state: &State) -> DirectionRanking {
             state,
             &move_by_direction(&state.my_position, &d, &state.game_size),
         )),
-        has_wall_to_follow: !(has_wall(&next_position, state) && current_space.next_snake_head_distance > 4),
+        has_wall_to_follow: !(has_wall(&next_position, state) && current_space.snake_head_distances.get(0).map_or(false, |dist| *dist > 4)),
         direction_score: OrderedFloat(evaluate_direction(&d, state)),
     }
 }
@@ -84,8 +84,7 @@ fn calculate_best_empty_space_after_step(game_state: &State, step_to: &Position)
 #[derive(Debug, Default)]
 struct EmptySpaceState {
     size: usize,
-    num_snake_heads: usize,
-    next_snake_head_distance: usize,
+    snake_head_distances: Vec<usize>,
     sum_x: u32,
     sum_y: u32,
 }
@@ -98,14 +97,11 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
     visited.insert(position.clone());
     queue.push_back((0usize, position.clone()));
 
-    result.next_snake_head_distance = usize::MAX;
     while let Some((dist, p)) = queue.pop_front() {
         if state.player_heads.values().any(|head| *head == p) {
-            result.num_snake_heads += 1;
             if state.field_occupation.get(p.as_dim()) != Some(&Some(state.my_id))
-                && dist < result.next_snake_head_distance
             {
-                result.next_snake_head_distance = dist;
+                result.snake_head_distances.push(dist);
             }
         }
         if !state.is_occupied(p.clone()) {
@@ -125,11 +121,7 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
 }
 
 fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
-    if state.num_snake_heads == 0 {
-        0f32
-    } else {
-        -(state.size as f32) / (state.num_snake_heads as f32).sqrt()
-    }
+    -(state.size as f32) / (state.snake_head_distances.len() as f32 + 1.0).sqrt()
 }
 
 fn evaluate_direction(d: &MoveDirection, state: &State) -> f32 {
