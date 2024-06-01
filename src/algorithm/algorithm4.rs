@@ -39,8 +39,6 @@ pub fn decide_action(
             info!("Avoiding other head");
         } else if directions[0].1.best_empty_space_score_after_step != directions[1].1.best_empty_space_score_after_step {
             info!("Room score different: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.best_empty_space_score_after_step.0, directions[1].0, directions[1].1.best_empty_space_score_after_step.0);
-        } else if directions[0].1.has_wall_to_follow != directions[1].1.has_wall_to_follow {
-            info!("Following wall");
         } else if directions[0].1.direction_score != directions[1].1.direction_score {
             info!("Better direction: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.direction_score.0, directions[1].0, directions[1].1.direction_score.0);
         } else {
@@ -55,7 +53,6 @@ pub fn decide_action(
 struct DirectionRanking {
     has_neighbour_head: bool,
     best_empty_space_score_after_step: OrderedFloat<f32>,
-    has_wall_to_follow: bool,
     direction_score: OrderedFloat<f32>,
     random: i32,
 }
@@ -69,8 +66,7 @@ fn rank_direction(d: &MoveDirection, state: &State, rng: &mut ThreadRng) -> Dire
             state,
             &next_position),
         ),
-        has_wall_to_follow: !(has_wall(&next_position, state) && current_space.snake_head_distances.get(0).map_or(true, |dist| *dist > 5)),
-        direction_score: OrderedFloat(evaluate_direction(&current_space, state)),
+        direction_score: OrderedFloat(evaluate_direction(&next_position, &current_space, state)),
         random: rng.gen(),
     }
 }
@@ -135,8 +131,9 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     -(state.size as f32) * (state.bounding_snakes.len() as f32).powf(0.25) / (state.snake_head_distances.len() as f32 + 1.0).sqrt()
 }
 
-fn evaluate_direction(space: &EmptySpaceState, _state: &State) -> f32 {
+fn evaluate_direction(pos: &Position, space: &EmptySpaceState, state: &State) -> f32 {
     space.snake_head_distances.iter()
         .map(|dist| 1.0 / *dist as f32)
-        .sum()
+        .sum::<f32>()
+    - if has_wall(pos, state) { 0.5 } else { 0.0 }
 }
