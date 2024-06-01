@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::thread::scope;
 
 use super::helper::{
     distance_to_next_opponent_head, has_neighbour_head, has_wall, iter_directions,
@@ -91,6 +92,7 @@ struct EmptySpaceState {
     snake_head_distances: Vec<usize>,
     sum_x: u32,
     bounding_snakes: HashSet<PlayerId>,
+    wide_room_score: f32,
     sum_y: u32,
 }
 
@@ -113,6 +115,7 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
             result.size += 1;
             result.sum_x += p.x;
             result.sum_y += p.y;
+            result.wide_room_score += 0.75f32.powf(dist as f32);
             for direction in iter_directions() {
                 let next_pos = move_by_direction(&p, &direction, &state.game_size);
                 if !visited.contains(&next_pos) {
@@ -132,8 +135,10 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
 }
 
 fn evaluate_direction(pos: &Position, space: &EmptySpaceState, state: &State) -> f32 {
+    info!("Wide space score: {}", space.wide_room_score / 20.0);
     space.snake_head_distances.iter()
         .map(|dist| 1.0 / *dist as f32)
         .sum::<f32>()
-    - if has_wall(pos, state) { 0.5 } else { 0.0 }
+    - if has_wall(pos, state) { 0.3 } else { 0.0 }
+    - space.wide_room_score / 20.0
 }
