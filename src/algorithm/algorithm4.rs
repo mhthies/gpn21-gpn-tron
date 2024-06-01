@@ -67,10 +67,10 @@ fn rank_direction(d: &MoveDirection, state: &State, rng: &mut ThreadRng) -> Dire
         has_neighbour_head: has_neighbour_head(&next_position, state) && state.player_heads.len() > 2,
         best_empty_space_score_after_step: OrderedFloat(calculate_best_empty_space_after_step(
             state,
-            &move_by_direction(&state.my_position, &d, &state.game_size),
-        )),
-        has_wall_to_follow: !(has_wall(&next_position, state) && current_space.snake_head_distances.get(0).map_or(false, |dist| *dist > 4)),
-        direction_score: OrderedFloat(evaluate_direction(&d, state)),
+            &next_position),
+        ),
+        has_wall_to_follow: !(has_wall(&next_position, state) && current_space.snake_head_distances.get(0).map_or(true, |dist| *dist > 5)),
+        direction_score: OrderedFloat(evaluate_direction(&current_space, state)),
         random: rng.gen(),
     }
 }
@@ -135,10 +135,8 @@ fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
     -(state.size as f32) * (state.bounding_snakes.len() as f32).powf(0.25) / (state.snake_head_distances.len() as f32 + 1.0).sqrt()
 }
 
-fn evaluate_direction(d: &MoveDirection, state: &State) -> f32 {
-    let next_position = move_by_direction(&state.my_position, d, &state.game_size);
-
-    distance_to_next_opponent_head(&next_position, state)
-        .map(|dist| 1.0 / dist as f32)
-        .unwrap_or(0.0)
+fn evaluate_direction(space: &EmptySpaceState, _state: &State) -> f32 {
+    space.snake_head_distances.iter()
+        .map(|dist| 1.0 / *dist as f32)
+        .sum()
 }
