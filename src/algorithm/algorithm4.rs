@@ -1,16 +1,20 @@
+use std::collections::HashSet;
+
 use super::helper::{
     distance_to_next_opponent_head, has_neighbour_head, has_wall, iter_directions,
     move_by_direction,
 };
 use super::State;
+use crate::client::PlayerId;
 use crate::{AlgorithmConfig, Command, MoveDirection, Position};
 use log::{info, warn};
 use ordered_float::OrderedFloat;
 use rand::rngs::ThreadRng;
+use rand::Rng;
 
 pub fn decide_action(
     state: &mut State,
-    _rng: &mut ThreadRng,
+    rng: &mut ThreadRng,
     _config: &AlgorithmConfig,
 ) -> Option<Command<'static>> {
     let mut directions = [
@@ -21,7 +25,7 @@ pub fn decide_action(
     ]
     .iter()
     .filter(|d| !state.is_occupied(move_by_direction(&state.my_position, &d, &state.game_size)))
-    .map(|d| (d, rank_direction(d, state)))
+    .map(|d| (d, rank_direction(d, state, rng)))
     .collect::<Vec<_>>();
 
     directions.sort_by_key(|(_d, rank)| rank.clone());
@@ -35,10 +39,12 @@ pub fn decide_action(
             info!("Avoiding other head");
         } else if directions[0].1.best_empty_space_score_after_step != directions[1].1.best_empty_space_score_after_step {
             info!("Room score different: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.best_empty_space_score_after_step.0, directions[1].0, directions[1].1.best_empty_space_score_after_step.0);
-        } else if directions[0].1.direction_score != directions[1].1.direction_score {
+        } else if directions[0].1.has_wall_to_follow != directions[1].1.has_wall_to_follow {
             info!("Following wall");
-        } else {
+        } else if directions[0].1.direction_score != directions[1].1.direction_score {
             info!("Better direction: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.direction_score.0, directions[1].0, directions[1].1.direction_score.0);
+        } else {
+            info!("Using random direction");
         }
     Some(Command::Move(directions[0].0.clone()))
     }
@@ -51,19 +57,21 @@ struct DirectionRanking {
     best_empty_space_score_after_step: OrderedFloat<f32>,
     has_wall_to_follow: bool,
     direction_score: OrderedFloat<f32>,
+    random: i32,
 }
 
-fn rank_direction(d: &MoveDirection, state: &State) -> DirectionRanking {
+fn rank_direction(d: &MoveDirection, state: &State, rng: &mut ThreadRng) -> DirectionRanking {
     let next_position = move_by_direction(&state.my_position, &d, &state.game_size);
     let current_space = explore_empty_space(state, next_position.clone());
     DirectionRanking {
-        has_neighbour_head: has_neighbour_head(&next_position, state),
+        has_neighbour_head: has_neighbour_head(&next_position, state) && state.player_heads.len() > 2,
         best_empty_space_score_after_step: OrderedFloat(calculate_best_empty_space_after_step(
             state,
             &move_by_direction(&state.my_position, &d, &state.game_size),
         )),
         has_wall_to_follow: !(has_wall(&next_position, state) && current_space.snake_head_distances.get(0).map_or(false, |dist| *dist > 4)),
         direction_score: OrderedFloat(evaluate_direction(&d, state)),
+        random: rng.gen(),
     }
 }
 
@@ -86,6 +94,7 @@ struct EmptySpaceState {
     size: usize,
     snake_head_distances: Vec<usize>,
     sum_x: u32,
+    bounding_snakes: HashSet<PlayerId>,
     sum_y: u32,
 }
 
@@ -115,13 +124,15 @@ fn explore_empty_space(state: &State, position: Position) -> EmptySpaceState {
                     queue.push_back((dist + 1, next_pos));
                 }
             }
+        } else {
+            result.bounding_snakes.insert(state.field_occupation.get(p.as_dim()).unwrap().unwrap().clone());
         }
     }
     return result;
 }
 
 fn evaluate_empty_space(state: &EmptySpaceState) -> f32 {
-    -(state.size as f32) / (state.snake_head_distances.len() as f32 + 1.0).sqrt()
+    -(state.size as f32) * (state.bounding_snakes.len() as f32).powf(0.25) / (state.snake_head_distances.len() as f32 + 1.0).sqrt()
 }
 
 fn evaluate_direction(d: &MoveDirection, state: &State) -> f32 {
