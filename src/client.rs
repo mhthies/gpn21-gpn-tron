@@ -22,8 +22,9 @@ pub enum Answer {
     Lose(u32, u32),
     Game(Position, PlayerId),
     Tick,
-    Die(PlayerId),
+    Die(Vec<PlayerId>),
     Message(PlayerId, String),
+    Player(PlayerId, String),
 }
 
 pub fn get_answer(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Answer>> {
@@ -57,10 +58,14 @@ pub fn get_answer(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Answer
             PlayerId(parts.next().unwrap_or("0").parse().unwrap_or(0)),
         )),
         "tick" => Some(Answer::Tick),
-        "die" => Some(Answer::Die(PlayerId(
-            parts.next().unwrap_or("0").parse().unwrap_or(0),
-        ))),
+        "die" => Some(Answer::Die(
+            parts.map(|id| PlayerId(id.parse().unwrap_or(0))).collect(),
+        )),
         "message" => Some(Answer::Message(
+            PlayerId(parts.next().unwrap_or("0").parse().unwrap_or(0)),
+            parts.next().unwrap_or("").to_string(),
+        )),
+        "player" => Some(Answer::Player(
             PlayerId(parts.next().unwrap_or("0").parse().unwrap_or(0)),
             parts.next().unwrap_or("").to_string(),
         )),

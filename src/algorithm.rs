@@ -37,13 +37,15 @@ impl State {
                 self.game_size = size.clone();
                 self.player_heads.clear();
             }
-            Answer::Die(p) => {
+            Answer::Die(dead_players) => {
                 for field in self.field_occupation.iter_mut() {
-                    if *field == Some(p.clone()) {
+                    if field.is_some_and(|occupied_by| dead_players.contains(&occupied_by)) {
                         *field = None;
                     }
                 }
-                self.player_heads.remove(p);
+                for p in dead_players {
+                    self.player_heads.remove(p);
+                }
             }
             _ => {}
         }
