@@ -4,7 +4,7 @@ use super::helper::{
 };
 use super::State;
 use crate::{AlgorithmConfig, Command, MoveDirection, Position};
-use log::debug;
+use log::{debug, info, warn};
 use ordered_float::OrderedFloat;
 use rand::rngs::ThreadRng;
 
@@ -21,17 +21,30 @@ pub fn decide_action(
     ]
     .iter()
     .filter(|d| !state.is_occupied(move_by_direction(&state.my_position, &d, &state.game_size)))
+    .map(|d| (d, rank_direction(d, state)))
     .collect::<Vec<_>>();
-    directions.sort_by_cached_key(|d| rank_direction(*d, state));
-    debug!("Directions: {:?}", directions);
+
+    directions.sort_by_key(|(_d, rank)| rank.clone());
     if directions.is_empty() {
+        warn!("No step possible.");
         None
     } else {
-        Some(Command::Move(directions[0].clone()))
+        if directions.len() == 1 {
+            info!("Only one step possible.");
+        } else if directions[0].1.0 != directions[1].1.0 {
+            info!("Avoiding other head");
+        } else if directions[0].1.1 != directions[1].1.1 {
+            info!("Room score different: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.1.0, directions[1].0, directions[1].1.1.0);
+        } else if directions[0].1.2 != directions[1].1.2 {
+            info!("Following wall");
+        } else {
+            info!("Better direction: {:?}: {}, {:?}: {}", directions[0].0, directions[0].1.3.0, directions[1].0, directions[1].1.3.0);
+        }
+    Some(Command::Move(directions[0].0.clone()))
     }
 }
 
-fn rank_direction(d: &MoveDirection, state: &State) -> impl Ord {
+fn rank_direction(d: &MoveDirection, state: &State) -> (bool, OrderedFloat<f32>, bool, OrderedFloat<f32>) {
     let next_position = move_by_direction(&state.my_position, &d, &state.game_size);
     let current_space = explore_empty_space(state, next_position.clone());
     (
